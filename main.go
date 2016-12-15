@@ -7,7 +7,30 @@ import (
 	"image/jpeg"
 	"log"
 	"os"
+	"sort"
 )
+
+type ColorSlice struct {
+	Colors []color.Color
+}
+
+// Len is part of sort.Interface.
+func (c *ColorSlice) Len() int {
+	return len(c.Colors)
+}
+
+// Swap is part of sort.Interface.
+func (c *ColorSlice) Swap(i, j int) {
+	c.Colors[i], c.Colors[j] = c.Colors[j], c.Colors[i]
+}
+
+// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
+func (c *ColorSlice) Less(i, j int) bool {
+	r1, _, _, _ := c.Colors[i].RGBA()
+	r2, _, _, _ := c.Colors[j].RGBA()
+
+	return r1 < r2
+}
 
 func main() {
 
@@ -18,17 +41,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sortByReds(image)
+	var colorSlice ColorSlice
+	buildSlice(image, &colorSlice)
+	sort.Sort(&colorSlice)
+
+	for _, color := range colorSlice.Colors {
+		fmt.Println(color.RGBA())
+	}
 }
 
-func sortByReds(image image.Image) {
+func buildSlice(image image.Image, colorSlice *ColorSlice) {
 	size := image.Bounds().Size()
 	xRange := make([]int, size.X)
 	yRange := make([]int, size.Y)
-
-	pixelIndex := make(map[uint32]color.Color)
-
-	count := 0
 
 	for xIndex := range xRange {
 		for yIndex := range yRange {
@@ -36,14 +61,9 @@ func sortByReds(image image.Image) {
 			y := yIndex + 1
 
 			color := image.At(x, y)
-			r, _, _, _ := color.RGBA()
-
-			pixelIndex[r] = color
-			count++
+			colorSlice.Colors = append(colorSlice.Colors, color)
 		}
 	}
-
-	fmt.Println(len(pixelIndex), count)
 
 }
 
