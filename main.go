@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -11,7 +10,8 @@ import (
 )
 
 type ColorSlice struct {
-	Colors []color.Color
+	original image.Image
+	Colors   []color.Color
 }
 
 // Len is part of sort.Interface.
@@ -26,8 +26,8 @@ func (c *ColorSlice) Swap(i, j int) {
 
 // Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
 func (c *ColorSlice) Less(i, j int) bool {
-	r1, _, _, _ := c.Colors[i].RGBA()
-	r2, _, _, _ := c.Colors[j].RGBA()
+	_, r1, _, _ := c.Colors[i].RGBA()
+	_, r2, _, _ := c.Colors[j].RGBA()
 
 	return r1 < r2
 }
@@ -42,12 +42,10 @@ func main() {
 	}
 
 	var colorSlice ColorSlice
+	colorSlice.original = image
 	buildSlice(image, &colorSlice)
 	sort.Sort(&colorSlice)
-
-	for _, color := range colorSlice.Colors {
-		fmt.Println(color.RGBA())
-	}
+	write(&colorSlice)
 }
 
 func buildSlice(image image.Image, colorSlice *ColorSlice) {
@@ -67,5 +65,28 @@ func buildSlice(image image.Image, colorSlice *ColorSlice) {
 
 }
 
-func write() {
+func write(colors *ColorSlice) {
+	newImage := image.NewRGBA(colors.original.Bounds())
+
+	rowMax := colors.original.Bounds().Dx()
+
+	rowCurrent := 1
+	colCurrent := 1
+
+	for _, currentColor := range colors.Colors {
+
+		// Eh
+		if rowCurrent > rowMax {
+			rowCurrent = 1
+			colCurrent++
+		}
+
+		newImage.Set(rowCurrent, colCurrent, currentColor)
+		rowCurrent++
+		// fmt.Println(rowCurrent, colCurrent, currentColor)
+	}
+
+	outfile, _ := os.Create("out.jpg")
+	jpeg.Encode(outfile, newImage, &jpeg.Options{Quality: 100})
+
 }
